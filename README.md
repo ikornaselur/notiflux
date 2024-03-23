@@ -2,30 +2,27 @@
 
 Broadcast messages to connected WebSocket clients by sending a POST request
 
-## TODO
-
-- [x] Ability to subscribe to channels
-- [x] Auth
-- [ ] Tests
-- [ ] CI/CD
-
-And probably a whole lot more 
-
-
 ## How does it work?
 
-Notiflux is deployed with a EC256 public key, to validate tokens from the
-broadcast source. Each client connects to the service and issues a `/join
-<channel> <token>` command. The client should get the token from the
-broadaster, with the right scope. The scope is validated against the channel,
-and if valid, lets the client join that broadcast channel
+Client connect via WebSocket and 'join' channels. A broadcasting source will
+make POST requests to the broadcast endpoint, with a message and a channel,
+which will then broadcast the message to all connected clients.
 
-The broadcaster then makes POST requests to `/broadcast` with a channel,
-message and token, which is validated as well to come from the broadcaster,
-which has the private key. If the token is valid, the broadcast is sent to
-all connected clients.
+### Auth
 
-## JWT Token
+Notiflux uses an EC256 public/private key pair JWT for authentication. Notiflux
+is deployed with the public key, while the broadcaster has the private key as a
+secret.
+
+When clients connect, they need to provide a JWT with the channel and scope,
+signed by the private key. This token should be provided be the broadcasting
+source.
+
+To make a broadcast, the broadcaster makes a POST request with a JWT as well,
+using the broadcast scope.
+
+### JWT structure
+
 The JWT token needs to have the following payload:
 
 ```js
