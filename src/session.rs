@@ -3,7 +3,7 @@ use actix_web_actors::ws;
 use std::time::{Duration, Instant};
 use ulid::Ulid;
 
-use crate::server;
+use crate::{message, server};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -22,7 +22,7 @@ impl WSSession {
             if Instant::now().duration_since(act.heartbeat) > CLIENT_TIMEOUT {
                 log::debug!("Websocket client heartbeat failed, disconnecting!");
 
-                act.addr.do_send(server::Disconnect { id: act.id });
+                act.addr.do_send(message::Disconnect { id: act.id });
 
                 ctx.stop();
 
@@ -43,7 +43,7 @@ impl Actor for WSSession {
 
         let addr = ctx.address();
         self.addr
-            .send(server::Connect {
+            .send(message::Connect {
                 addr: addr.recipient(),
                 id: self.id,
             })
@@ -59,15 +59,15 @@ impl Actor for WSSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        self.addr.do_send(server::Disconnect { id: self.id });
+        self.addr.do_send(message::Disconnect { id: self.id });
         Running::Stop
     }
 }
 
-impl Handler<server::Message> for WSSession {
+impl Handler<message::Message> for WSSession {
     type Result = ();
 
-    fn handle(&mut self, msg: server::Message, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: message::Message, ctx: &mut Self::Context) {
         ctx.text(msg.0);
     }
 }
@@ -82,7 +82,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
             Ok(msg) => msg,
         };
 
-        log::debug!("Websocket message: {:?}", msg);
+        log::trace!("Websocket message: {:?}", msg);
 
         match msg {
             ws::Message::Ping(msg) => {
@@ -96,11 +96,30 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
                 let m = text.trim();
                 log::debug!("Text message from websocket: {}", m);
 
-                self.addr.do_send(server::ClientMessage {
-                    id: self.id,
-                    msg: m.to_string(),
-                    channel: "public".to_string(),
-                })
+                // We only care about messages that start with a slash
+                if !m.starts_with('/') {
+                    return;
+                }
+
+                let args: Vec<&str> = m.splitn(2, ' ').collect();
+                match args[..] {
+                    ["/join", channel] => {
+                        self.addr.do_send(message::JoinChannel {
+                            id: self.id,
+                            channel: channel.to_string(),
+                        });
+                    }
+                    ["/leave", channel] => {
+                        self.addr.do_send(message::LeaveChannel {
+                            id: self.id,
+                            channel: channel.to_string(),
+                        });
+                    }
+                    ["/leave-all"] => {
+                        self.addr.do_send(message::LeaveAllChannels { id: self.id });
+                    }
+                    _ => (),
+                }
             }
             ws::Message::Close(reason) => {
                 ctx.close(reason);

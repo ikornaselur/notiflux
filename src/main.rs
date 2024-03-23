@@ -4,6 +4,7 @@ use actix_web_actors::ws;
 use std::time::Instant;
 use ulid::Ulid;
 
+mod message;
 mod server;
 mod session;
 
@@ -15,7 +16,7 @@ async fn ws_route(
     ws::start(
         session::WSSession {
             id: Ulid::new(),
-            channels: vec!["public".to_string()],
+            channels: Vec::new(),
             heartbeat: Instant::now(),
             addr: srv.get_ref().clone(),
         },
@@ -36,7 +37,7 @@ async fn broadcast(
     let channel = req["channel"].as_str().unwrap();
     let message = req["message"].as_str().unwrap();
 
-    srv.get_ref().do_send(server::Broadcast {
+    srv.get_ref().do_send(message::Broadcast {
         msg: message.to_owned(),
         channel: channel.to_owned(),
     });
