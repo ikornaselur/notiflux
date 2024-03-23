@@ -4,6 +4,9 @@ use actix_web_actors::ws;
 use std::time::Instant;
 use ulid::Ulid;
 
+mod auth;
+mod config;
+mod error;
 mod message;
 mod server;
 mod session;
@@ -36,10 +39,12 @@ async fn broadcast(
 ) -> HttpResponse {
     let channel = req["channel"].as_str().unwrap();
     let message = req["message"].as_str().unwrap();
+    let token = req["token"].as_str().unwrap();
 
     srv.get_ref().do_send(message::Broadcast {
         msg: message.to_owned(),
         channel: channel.to_owned(),
+        token: token.to_owned(),
     });
 
     HttpResponse::Ok().finish()
@@ -49,9 +54,12 @@ async fn broadcast(
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
 
-    let server = server::Server::new().start();
+    let config = config::get_config();
 
-    log::info!("starting HTTP server at http://localhost:8080");
+    let server = server::Server::new(&config.jwt_public_key).start();
+
+    log::info!("Starting server on {}:{}", config.host, config.port);
+    let bind_tuple = (config.host.clone(), config.port);
 
     HttpServer::new(move || {
         App::new()
@@ -60,8 +68,8 @@ async fn main() -> std::io::Result<()> {
             .route("/ws", web::get().to(ws_route))
             .wrap(Logger::default())
     })
-    .workers(4)
-    .bind(("127.0.0.1", 8080))?
+    .workers(config.worker_count)
+    .bind(bind_tuple)?
     .run()
     .await
 }

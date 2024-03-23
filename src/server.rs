@@ -2,19 +2,22 @@ use actix::prelude::*;
 use std::collections::{HashMap, HashSet};
 use ulid::Ulid;
 
+use crate::auth::{get_action, Action};
 use crate::message;
 
 #[derive(Debug)]
 pub struct Server {
     sessions: HashMap<Ulid, Recipient<message::Message>>,
     channels: HashMap<String, HashSet<Ulid>>,
+    jwt_public_key: Vec<u8>,
 }
 
 impl Server {
-    pub fn new() -> Server {
+    pub fn new(jwt_public_key: &[u8]) -> Server {
         Server {
             sessions: HashMap::new(),
             channels: HashMap::new(),
+            jwt_public_key: jwt_public_key.to_vec(),
         }
     }
 
@@ -38,7 +41,23 @@ impl Handler<message::Broadcast> for Server {
     type Result = ();
     fn handle(&mut self, msg: message::Broadcast, _: &mut Context<Self>) {
         log::debug!("handling Broadcast: {:?}", msg);
-        self.broadcast(&msg.channel, &msg.msg);
+
+        match get_action(&msg.token, &self.jwt_public_key) {
+            Ok(Action::Broadcast(channel)) => {
+                if channel == msg.channel {
+                    log::debug!("Broadcasting message to channel: {}", msg.channel);
+                    self.broadcast(&msg.channel, &msg.msg);
+                } else {
+                    log::error!(
+                        "Not allowed to broadcast message to channel: {}",
+                        msg.channel
+                    );
+                }
+            }
+            _ => {
+                log::error!("Not allowed to broadcast message");
+            }
+        }
     }
 }
 
@@ -64,10 +83,30 @@ impl Handler<message::JoinChannel> for Server {
     fn handle(&mut self, msg: message::JoinChannel, _: &mut Context<Self>) {
         log::debug!("{:?} joining channel {}", msg.id, msg.channel);
 
-        self.channels
-            .entry(msg.channel.clone())
-            .or_default()
-            .insert(msg.id);
+        match get_action(&msg.token, &self.jwt_public_key) {
+            Ok(Action::Join(channel)) => {
+                if channel == msg.channel {
+                    log::debug!("{:?} is allowed to join channel {}", msg.id, msg.channel);
+                    self.channels
+                        .entry(msg.channel.clone())
+                        .or_default()
+                        .insert(msg.id);
+                } else {
+                    log::error!(
+                        "{:?} is not allowed to join channel {}",
+                        msg.id,
+                        msg.channel
+                    );
+                }
+            }
+            _ => {
+                log::error!(
+                    "{:?} is not allowed to join channel {}",
+                    msg.id,
+                    msg.channel
+                );
+            }
+        }
     }
 }
 

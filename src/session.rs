@@ -103,11 +103,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
 
                 let args: Vec<&str> = m.splitn(2, ' ').collect();
                 match args[..] {
-                    ["/join", channel] => {
-                        self.addr.do_send(message::JoinChannel {
-                            id: self.id,
-                            channel: channel.to_string(),
-                        });
+                    ["/join", join_args] => {
+                        let join_args: Vec<&str> = join_args.splitn(2, ' ').collect();
+                        if let [channel, token] = join_args[..] {
+                            self.addr.do_send(message::JoinChannel {
+                                id: self.id,
+                                channel: channel.to_string(),
+                                token: token.to_string(),
+                            });
+                        } else {
+                            ctx.text("Invalid join command");
+                        }
                     }
                     ["/leave", channel] => {
                         self.addr.do_send(message::LeaveChannel {
@@ -118,7 +124,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
                     ["/leave-all"] => {
                         self.addr.do_send(message::LeaveAllChannels { id: self.id });
                     }
-                    _ => (),
+                    _ => {
+                        ctx.text("Unknown command");
+                    }
                 }
             }
             ws::Message::Close(reason) => {
