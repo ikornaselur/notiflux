@@ -1,6 +1,6 @@
-use anyhow::Result;
+use notiflux::NotifluxError;
 
 #[actix_web::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), NotifluxError> {
     notiflux::run().await
 }

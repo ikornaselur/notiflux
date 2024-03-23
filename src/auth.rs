@@ -1,5 +1,4 @@
 use crate::error::{NotifluxError, NotifluxErrorType};
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,12 +15,17 @@ pub enum Action {
     Broadcast(String),
 }
 
-pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action> {
-    let key = jsonwebtoken::DecodingKey::from_ec_pem(public_key)
-        .context("Unable to decode public key")?;
+pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action, NotifluxError> {
+    let key = jsonwebtoken::DecodingKey::from_ec_pem(public_key).map_err(|_| NotifluxError {
+        message: Some("Invalid public key".to_owned()),
+        error_type: NotifluxErrorType::JWTError,
+    })?;
     let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::ES256);
-    let token_data = jsonwebtoken::decode::<Claims>(token, &key, &validation)
-        .context("Unable to decode JWT token")?;
+    let token_data =
+        jsonwebtoken::decode::<Claims>(token, &key, &validation).map_err(|_| NotifluxError {
+            message: Some("Invalid token".to_owned()),
+            error_type: NotifluxErrorType::JWTError,
+        })?;
 
     let Claims {
         sub: _,
@@ -36,10 +40,9 @@ pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action> {
         Ok(Action::Broadcast(channel))
     } else {
         Err(NotifluxError {
-            message: Some("Invalid scope".to_owned()),
-            error_type: NotifluxErrorType::ValidationError,
-        }
-        .into())
+            message: Some(format!("Invalid scope: {}", scope)),
+            error_type: NotifluxErrorType::JWTError,
+        })
     }
 }
 
@@ -80,6 +83,7 @@ mod tests {
         assert!(action.is_err());
 
         let err = action.unwrap_err();
-        assert_eq!(err.to_string(), "Invalid scope");
+        assert_eq!(err.error_type, NotifluxErrorType::JWTError);
+        assert_eq!(err.message, Some("Invalid scope: invalid".to_owned()));
     }
 }

@@ -1,11 +1,11 @@
 use actix::*;
 use actix_web::{middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use anyhow::Result;
+use serde::Deserialize;
 use std::time::Instant;
 use ulid::Ulid;
 
-use crate::{config, message, server, session};
+use crate::{config, message, server, session, NotifluxError};
 
 async fn ws_route(
     req: HttpRequest,
@@ -24,29 +24,32 @@ async fn ws_route(
     )
 }
 
+#[derive(Deserialize)]
+struct BroadcastPayload {
+    channel: String,
+    message: String,
+    token: String,
+}
+
 /// POST /broadcast
 /// Broadcast a message to all clients connected to a channel.
 /// The request body should be a JSON object with the following fields:
 /// - channel: the channel to broadcast the message to
 /// - message: the message to broadcast
 async fn broadcast(
-    req: web::Json<serde_json::Value>,
+    req: web::Json<BroadcastPayload>,
     srv: web::Data<Addr<server::Server>>,
 ) -> HttpResponse {
-    let channel = req["channel"].as_str().unwrap();
-    let message = req["message"].as_str().unwrap();
-    let token = req["token"].as_str().unwrap();
-
     srv.get_ref().do_send(message::Broadcast {
-        msg: message.to_owned(),
-        channel: channel.to_owned(),
-        token: token.to_owned(),
+        msg: req.message.to_owned(),
+        channel: req.channel.to_owned(),
+        token: req.token.to_owned(),
     });
 
     HttpResponse::Ok().finish()
 }
 
-pub async fn run() -> Result<()> {
+pub async fn run() -> Result<(), NotifluxError> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
 
     let config = config::get_config();

@@ -9,7 +9,8 @@ pub enum NotifluxErrorType {
     Error,
     ValidationError,
     Base64DecodeError,
-    JWTDecodeError,
+    JWTError,
+    ConfigError,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -37,7 +38,10 @@ impl ResponseError for NotifluxErrorType {
 
 impl fmt::Display for NotifluxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NotifluxError: {:?}", self.error_type)
+        match self.message {
+            Some(ref message) => write!(f, "[{}] {}", self.error_type, message),
+            None => write!(f, "{}", self.error_type),
+        }
     }
 }
 
@@ -48,7 +52,8 @@ impl ResponseError for NotifluxError {
             | NotifluxErrorType::Error
             | NotifluxErrorType::IOError
             | NotifluxErrorType::Base64DecodeError
-            | NotifluxErrorType::JWTDecodeError => StatusCode::INTERNAL_SERVER_ERROR,
+            | NotifluxErrorType::ConfigError
+            | NotifluxErrorType::JWTError => StatusCode::INTERNAL_SERVER_ERROR,
             NotifluxErrorType::ValidationError => StatusCode::BAD_REQUEST,
         }
     }
@@ -117,13 +122,7 @@ impl From<jsonwebtoken::errors::Error> for NotifluxError {
         log::error!("JWT decode error: {}", error);
         NotifluxError {
             message: Some("Unexpected JWT decode error".to_string()),
-            error_type: NotifluxErrorType::JWTDecodeError,
+            error_type: NotifluxErrorType::JWTError,
         }
-    }
-}
-
-impl From<NotifluxError> for anyhow::Error {
-    fn from(error: NotifluxError) -> Self {
-        anyhow::Error::msg(error.message())
     }
 }
