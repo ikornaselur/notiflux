@@ -81,7 +81,7 @@ jobs:
         run: cargo llvm-cov --all-features --codecov --output-path codecov.json
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: "!contains(github.ref, 'release')"
         with:
           files: codecov.json
