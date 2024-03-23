@@ -1,0 +1,112 @@
+name: Test and lint
+
+on:
+  push:
+    branches:
+      - '**'
+
+env:
+  RUSTFLAGS: "-Cinstrument-coverage"
+
+jobs:
+  build:
+    name: Build and cache project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache
+        id: cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "run"
+
+      - name: Build project
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo build --tests
+
+      - name: Cargo check to build a check cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo check
+        
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "run"
+
+      - name: Run cargo check
+        run: cargo check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "run"
+
+      - name: Run cargo test
+        run: cargo llvm-cov --all-features --codecov --output-path codecov.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: "!contains(github.ref, 'release')"
+        with:
+          files: codecov.json
+          fail_ci_if_error: false
+
+  lints:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "run"
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
