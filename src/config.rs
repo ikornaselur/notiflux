@@ -1,7 +1,7 @@
-use crate::error::NotifluxError;
+use anyhow::{Context, Result};
+use base64::prelude::*;
 use std::env;
 use std::sync::OnceLock;
-use base64::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -18,9 +18,12 @@ const DEFAULT_WORKER_COUNT: usize = 4;
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 impl Config {
-    pub fn init_from_env() -> Result<Self, NotifluxError> {
-        let jwt_public_key_b64 = env::var("JWT_PUBLIC_KEY_B64")?;
-        let jwt_public_key = BASE64_STANDARD.decode(jwt_public_key_b64.as_bytes())?;
+    pub fn init_from_env() -> Result<Self> {
+        let jwt_public_key_b64 =
+            env::var("JWT_PUBLIC_KEY_B64").context("Unable to read JWT_PUBLIC_KEY_B64 from env")?;
+        let jwt_public_key = BASE64_STANDARD
+            .decode(jwt_public_key_b64.as_bytes())
+            .context("Unable to Base64 decode JWT_PUBLIC_KEY_B64")?;
 
         let port = env::var("PORT")
             .unwrap_or_else(|_| DEFAULT_PORT.to_string())

@@ -1,4 +1,5 @@
 use crate::error::{NotifluxError, NotifluxErrorType};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,10 +16,12 @@ pub enum Action {
     Broadcast(String),
 }
 
-pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action, NotifluxError> {
-    let key = jsonwebtoken::DecodingKey::from_ec_pem(public_key)?;
+pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action> {
+    let key = jsonwebtoken::DecodingKey::from_ec_pem(public_key)
+        .context("Unable to decode public key")?;
     let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::ES256);
-    let token_data = jsonwebtoken::decode::<Claims>(token, &key, &validation)?;
+    let token_data = jsonwebtoken::decode::<Claims>(token, &key, &validation)
+        .context("Unable to decode JWT token")?;
 
     let Claims {
         sub: _,
@@ -35,7 +38,8 @@ pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action, NotifluxErro
         Err(NotifluxError {
             message: Some("Invalid scope".to_owned()),
             error_type: NotifluxErrorType::ValidationError,
-        })
+        }
+        .into())
     }
 }
 
@@ -76,7 +80,6 @@ mod tests {
         assert!(action.is_err());
 
         let err = action.unwrap_err();
-        assert_eq!(err.error_type, NotifluxErrorType::ValidationError);
-        assert_eq!(err.message, Some("Invalid scope".to_owned()));
+        assert_eq!(err.to_string(), "Invalid scope");
     }
 }

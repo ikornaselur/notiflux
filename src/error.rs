@@ -121,3 +121,9 @@ impl From<jsonwebtoken::errors::Error> for NotifluxError {
         }
     }
 }
+
+impl From<NotifluxError> for anyhow::Error {
+    fn from(error: NotifluxError) -> Self {
+        anyhow::Error::msg(error.message())
+    }
+}
