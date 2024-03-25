@@ -31,11 +31,6 @@ struct BroadcastPayload {
     token: String,
 }
 
-/// POST /broadcast
-/// Broadcast a message to all clients connected to a topic.
-/// The request body should be a JSON object with the following fields:
-/// - topic: the topic to broadcast the message to
-/// - message: the message to broadcast
 async fn broadcast(
     req: web::Json<BroadcastPayload>,
     srv: web::Data<Addr<server::Server>>,
@@ -46,6 +41,10 @@ async fn broadcast(
         token: req.token.to_owned(),
     });
 
+    HttpResponse::Ok().finish()
+}
+
+async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
@@ -64,6 +63,7 @@ pub async fn run() -> Result<(), NotifluxError> {
             .app_data(web::Data::new(server.clone()))
             .route("/broadcast", web::post().to(broadcast))
             .route("/ws", web::get().to(ws_route))
+            .route("/health", web::get().to(health_check))
             .wrap(Logger::default())
     })
     .workers(config.worker_count)

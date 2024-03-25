@@ -17,6 +17,7 @@ FROM scratch
 
 COPY --from=builder /usr/src/notiflux/target/x86_64-unknown-linux-musl/release/notiflux .
 COPY --from=builder /etc/ssl /etc/ssl
+ENV HOST 0.0.0.0
 USER 1000
 EXPOSE 8080
 
