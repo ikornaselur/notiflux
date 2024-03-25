@@ -57,3 +57,50 @@ pub fn get_config() -> &'static Config {
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_init_from_env() {
+        env::set_var("JWT_PUBLIC_KEY_B64", "SGVsbG8hCg==");
+        env::set_var("PORT", "1234");
+        env::set_var("HOST", "10.11.12.13");
+        env::set_var("WORKER_COUNT", "4");
+
+        let config = Config::init_from_env().unwrap();
+
+        assert_eq!(config.port, 1234);
+        assert_eq!(config.host, "10.11.12.13");
+        assert_eq!(config.worker_count, 4);
+        assert_eq!(config.jwt_public_key, b"Hello!\n".to_vec());
+    }
+
+    #[test]
+    fn test_init_defaults() {
+        env::set_var("JWT_PUBLIC_KEY_B64", "SGVsbG8hCg==");
+
+        let config = Config::init_from_env().unwrap();
+
+        assert_eq!(config.port, DEFAULT_PORT);
+        assert_eq!(config.host, DEFAULT_HOST);
+        assert_eq!(config.worker_count, DEFAULT_WORKER_COUNT);
+        assert_eq!(config.jwt_public_key, b"Hello!\n".to_vec());
+    }
+
+    #[test]
+    fn test_init_requires_jwt_public_key() {
+        env::remove_var("JWT_PUBLIC_KEY_B64");
+
+        let config = Config::init_from_env();
+
+        assert!(config.is_err());
+        let err = config.unwrap_err();
+        assert_eq!(err.error_type, NotifluxErrorType::EnvError);
+        assert_eq!(
+            err.message,
+            Some("JWT_PUBLIC_KEY_B64 is not set in env".to_string())
+        );
+    }
+}

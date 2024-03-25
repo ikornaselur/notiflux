@@ -39,6 +39,7 @@ impl Actor for Server {
 
 impl Handler<message::Broadcast> for Server {
     type Result = ();
+
     fn handle(&mut self, msg: message::Broadcast, _: &mut Context<Self>) {
         log::debug!("handling Broadcast: {:?}", msg);
 
