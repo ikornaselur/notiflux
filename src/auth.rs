@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 pub struct Claims {
     sub: String,
     exp: u64,
-    channel: String,
+    topic: String,
     scope: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
-    Join(String),
+    Subscribe(String),
     Broadcast(String),
 }
 
@@ -30,14 +30,14 @@ pub fn get_action(token: &str, public_key: &[u8]) -> Result<Action, NotifluxErro
     let Claims {
         sub: _,
         exp: _,
-        channel,
+        topic,
         scope,
     } = token_data.claims;
 
-    if scope == "join" {
-        Ok(Action::Join(channel))
+    if scope == "subscribe" {
+        Ok(Action::Subscribe(topic))
     } else if scope == "broadcast" {
-        Ok(Action::Broadcast(channel))
+        Ok(Action::Broadcast(topic))
     } else {
         Err(NotifluxError {
             message: Some(format!("Invalid scope: {}", scope)),
@@ -51,21 +51,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_action_join() {
+    fn test_get_action_subscribe() {
         let public_key = include_bytes!("../scripts/public_key.pem");
 
-        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDc5NDkyMywiY2hhbm5lbCI6ImZvbyIsInNjb3BlIjoiam9pbiJ9.bG-QjVslDfpAAN9_BLH68F7CoW2vGnBoDkKV7y98xPQKlvFBId1WvdSlXYEM87yloKOE3L673_yz7mbpZXkCYQ";
+        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDk4ODU3NiwidG9waWMiOiJmb28iLCJzY29wZSI6InN1YnNjcmliZSJ9.1sZDe6V5ccJEALFeuHQe4R0D_t35t9c1s3QP3odFxIPxxdGXJOq2G8BgrMpqO3bu4n_q0GmnbFyY7LXVgLJbPw";
 
         let action = get_action(token, public_key).unwrap();
 
-        assert_eq!(action, Action::Join("foo".to_owned()));
+        assert_eq!(action, Action::Subscribe("foo".to_owned()));
     }
 
     #[test]
     fn test_get_action_broadcast() {
         let public_key = include_bytes!("../scripts/public_key.pem");
 
-        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDc5NTA4MCwiY2hhbm5lbCI6ImJhciIsInNjb3BlIjoiYnJvYWRjYXN0In0.sUjM6cLvJbL7Ij1HLOYuTBwuqck8ArrPxJ2bP59einj3FRh_GEj9mYBassH8bCtLdkXS0PrUomQhpUl_cEaIvQ";
+        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDk4ODU4OCwidG9waWMiOiJiYXIiLCJzY29wZSI6ImJyb2FkY2FzdCJ9.KEk-9_i6Z17P1cB2m4_pt_LJrvhg2X4OrYWoqBVgvA0AtmcKyCOZcwUQiuoZ8rFwjvj9_KiFWK5hE-bRRnfQsA";
 
         let action = get_action(token, public_key).unwrap();
 
@@ -76,7 +76,7 @@ mod tests {
     fn test_get_action_invalid_scope() {
         let public_key = include_bytes!("../scripts/public_key.pem");
 
-        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDc5NTEyMywiY2hhbm5lbCI6ImJhciIsInNjb3BlIjoiaW52YWxpZCJ9.q7_QUzYa8E1tMLpZdtr68OM83z-mJKcPI4CLr2HJR_NuoWN4ThqDZnM_rRkoEIlCRS9fj93LZI53LbZnQqC9CQ";
+        let token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJub3RpZmx1eCIsImV4cCI6NDg2NDk4ODcxMywidG9waWMiOiJiYXIiLCJzY29wZSI6ImludmFsaWQifQ.rxmGLj6ykIRRUVaZMj4tzQ2Gf12yQdEdRBy_kVdesYTPCFVCVSP7G-o-JoRwcX1dAAwryt-b3nuwXTVGy_ge4w";
 
         let action = get_action(token, public_key);
 

@@ -12,7 +12,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 pub struct WSSession {
     pub id: Ulid,
     pub heartbeat: Instant,
-    pub channels: Vec<String>,
+    pub topics: Vec<String>,
     pub addr: Addr<server::Server>,
 }
 
@@ -103,26 +103,26 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
 
                 let args: Vec<&str> = m.splitn(2, ' ').collect();
                 match args[..] {
-                    ["/join", join_args] => {
-                        let join_args: Vec<&str> = join_args.splitn(2, ' ').collect();
-                        if let [channel, token] = join_args[..] {
-                            self.addr.do_send(message::JoinChannel {
+                    ["/subscribe", sub_args] => {
+                        let sub_args: Vec<&str> = sub_args.splitn(2, ' ').collect();
+                        if let [topic, token] = sub_args[..] {
+                            self.addr.do_send(message::SubscribeToTopic {
                                 id: self.id,
-                                channel: channel.to_string(),
+                                topic: topic.to_string(),
                                 token: token.to_string(),
                             });
                         } else {
-                            ctx.text("Invalid join command");
+                            ctx.text("Invalid subscribe command, it should be: /subscribe <topic> <token>");
                         }
                     }
-                    ["/leave", channel] => {
-                        self.addr.do_send(message::LeaveChannel {
+                    ["/unsubscribe", topic] => {
+                        self.addr.do_send(message::UnsubscribeFromTopic {
                             id: self.id,
-                            channel: channel.to_string(),
+                            topic: topic.to_string(),
                         });
                     }
-                    ["/leave-all"] => {
-                        self.addr.do_send(message::LeaveAllChannels { id: self.id });
+                    ["/unsubscribe-all"] => {
+                        self.addr.do_send(message::UnsubscribeAll { id: self.id });
                     }
                     _ => {
                         ctx.text("Unknown command");
