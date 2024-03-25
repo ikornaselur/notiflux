@@ -8,7 +8,7 @@ use crate::message;
 #[derive(Debug)]
 pub struct Server {
     sessions: HashMap<Ulid, Recipient<message::Message>>,
-    channels: HashMap<String, HashSet<Ulid>>,
+    topics: HashMap<String, HashSet<Ulid>>,
     jwt_public_key: Vec<u8>,
 }
 
@@ -16,14 +16,14 @@ impl Server {
     pub fn new(jwt_public_key: &[u8]) -> Server {
         Server {
             sessions: HashMap::new(),
-            channels: HashMap::new(),
+            topics: HashMap::new(),
             jwt_public_key: jwt_public_key.to_vec(),
         }
     }
 
-    fn broadcast(&self, channel: &str, message: &str) {
-        log::debug!("Broadcasting message to channel: {}: {}", channel, message);
-        if let Some(sessions) = self.channels.get(channel) {
+    fn broadcast(&self, topic: &str, message: &str) {
+        log::debug!("Broadcasting message to topic: {}: {}", topic, message);
+        if let Some(sessions) = self.topics.get(topic) {
             for id in sessions {
                 if let Some(addr) = self.sessions.get(id) {
                     addr.do_send(message::Message(message.to_owned()));
@@ -43,15 +43,12 @@ impl Handler<message::Broadcast> for Server {
         log::debug!("handling Broadcast: {:?}", msg);
 
         match get_action(&msg.token, &self.jwt_public_key) {
-            Ok(Action::Broadcast(channel)) => {
-                if channel == msg.channel {
-                    log::debug!("Broadcasting message to channel: {}", msg.channel);
-                    self.broadcast(&msg.channel, &msg.msg);
+            Ok(Action::Broadcast(topic)) => {
+                if topic == msg.topic {
+                    log::debug!("Broadcasting message to topic: {}", msg.topic);
+                    self.broadcast(&msg.topic, &msg.msg);
                 } else {
-                    log::error!(
-                        "Not allowed to broadcast message to channel: {}",
-                        msg.channel
-                    );
+                    log::error!("Not allowed to broadcast message to topic: {}", msg.topic);
                 }
             }
             _ => {
@@ -77,59 +74,59 @@ impl Handler<message::Disconnect> for Server {
     }
 }
 
-impl Handler<message::JoinChannel> for Server {
+impl Handler<message::SubscribeToTopic> for Server {
     type Result = ();
 
-    fn handle(&mut self, msg: message::JoinChannel, _: &mut Context<Self>) {
-        log::debug!("{:?} joining channel {}", msg.id, msg.channel);
+    fn handle(&mut self, msg: message::SubscribeToTopic, _: &mut Context<Self>) {
+        log::debug!("{:?} subscribing topic {}", msg.id, msg.topic);
 
         match get_action(&msg.token, &self.jwt_public_key) {
-            Ok(Action::Join(channel)) => {
-                if channel == msg.channel {
-                    log::debug!("{:?} is allowed to join channel {}", msg.id, msg.channel);
-                    self.channels
-                        .entry(msg.channel.clone())
+            Ok(Action::Subscribe(topic)) => {
+                if topic == msg.topic {
+                    log::debug!("{:?} is allowed to subscribe topic {}", msg.id, msg.topic);
+                    self.topics
+                        .entry(msg.topic.clone())
                         .or_default()
                         .insert(msg.id);
                 } else {
                     log::error!(
-                        "{:?} is not allowed to join channel {}",
+                        "{:?} is not allowed to subscribe topic {}",
                         msg.id,
-                        msg.channel
+                        msg.topic
                     );
                 }
             }
             _ => {
                 log::error!(
-                    "{:?} is not allowed to join channel {}",
+                    "{:?} is not allowed to subscribe topic {}",
                     msg.id,
-                    msg.channel
+                    msg.topic
                 );
             }
         }
     }
 }
 
-impl Handler<message::LeaveChannel> for Server {
+impl Handler<message::UnsubscribeFromTopic> for Server {
     type Result = ();
 
-    fn handle(&mut self, msg: message::LeaveChannel, _: &mut Context<Self>) {
-        log::debug!("{:?} leaving channel {}", msg.id, msg.channel);
+    fn handle(&mut self, msg: message::UnsubscribeFromTopic, _: &mut Context<Self>) {
+        log::debug!("{:?} leaving topic {}", msg.id, msg.topic);
 
-        if let Some(channel) = self.channels.get_mut(&msg.channel) {
-            channel.remove(&msg.id);
+        if let Some(topic) = self.topics.get_mut(&msg.topic) {
+            topic.remove(&msg.id);
         }
     }
 }
 
-impl Handler<message::LeaveAllChannels> for Server {
+impl Handler<message::UnsubscribeAll> for Server {
     type Result = ();
 
-    fn handle(&mut self, msg: message::LeaveAllChannels, _: &mut Context<Self>) {
-        log::debug!("{:?} leaving all channels", msg.id);
+    fn handle(&mut self, msg: message::UnsubscribeAll, _: &mut Context<Self>) {
+        log::debug!("{:?} leaving all topics", msg.id);
 
-        for (_, channel) in self.channels.iter_mut() {
-            channel.remove(&msg.id);
+        for (_, topic) in self.topics.iter_mut() {
+            topic.remove(&msg.id);
         }
     }
 }

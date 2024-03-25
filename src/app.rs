@@ -15,7 +15,7 @@ async fn ws_route(
     ws::start(
         session::WSSession {
             id: Ulid::new(),
-            channels: Vec::new(),
+            topics: Vec::new(),
             heartbeat: Instant::now(),
             addr: srv.get_ref().clone(),
         },
@@ -26,15 +26,15 @@ async fn ws_route(
 
 #[derive(Deserialize)]
 struct BroadcastPayload {
-    channel: String,
+    topic: String,
     message: String,
     token: String,
 }
 
 /// POST /broadcast
-/// Broadcast a message to all clients connected to a channel.
+/// Broadcast a message to all clients connected to a topic.
 /// The request body should be a JSON object with the following fields:
-/// - channel: the channel to broadcast the message to
+/// - topic: the topic to broadcast the message to
 /// - message: the message to broadcast
 async fn broadcast(
     req: web::Json<BroadcastPayload>,
@@ -42,7 +42,7 @@ async fn broadcast(
 ) -> HttpResponse {
     srv.get_ref().do_send(message::Broadcast {
         msg: req.message.to_owned(),
-        channel: req.channel.to_owned(),
+        topic: req.topic.to_owned(),
         token: req.token.to_owned(),
     });
 
