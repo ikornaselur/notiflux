@@ -74,3 +74,41 @@ The JWT token needs to have the following payload:
 ```
 
 See ./scripts folder for examples in Python
+
+## Deployment
+
+notiflux is published as a docker container as ghcr.io/ikornaselur/notiflux:latest
+
+The configuration is done through environment variables:
+
+* `HOST`: Defaults to 127.0.0.1
+* `PORT`: Defaults to 8080
+* `JWT_PUBLIC_KEY_B64`: Required, the base64 encoded public key
+
+Generating a private key can be done with
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out es256_private.pem
+```
+
+and then the public key
+
+```bash
+openssl ec -in es256_private.pem -pubout -out es256_public.pem
+```
+
+which can be base64 encoded with
+
+```bash
+cat es256_public.pem | base64
+```
+
+then running with docker is as simple as
+
+```bash
+docker run \
+    -e JWT_PUBLIC_KEY_B64=... \
+    -e HOST=0.0.0.0 \
+    -p 127.0.0.1:8080:8080 \
+    ghcr.io/ikornaselur/notiflux:latest
+```
