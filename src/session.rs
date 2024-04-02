@@ -104,7 +104,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WSSession {
                 let args: Vec<&str> = m.splitn(2, ' ').collect();
                 match args[..] {
                     ["/subscribe", sub_args] => {
-                        let sub_args: Vec<&str> = sub_args.splitn(2, ' ').collect();
+                        let sub_args: Vec<&str> = sub_args.split(' ').collect();
                         if let [topic, token] = sub_args[..] {
                             self.addr.do_send(message::SubscribeToTopic {
                                 id: self.id,

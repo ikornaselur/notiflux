@@ -44,8 +44,8 @@ impl Handler<message::Broadcast> for Server {
         log::debug!("handling Broadcast: {:?}", msg);
 
         match get_action(&msg.token, &self.jwt_public_key) {
-            Ok(Action::Broadcast(topic)) => {
-                if topic == msg.topic {
+            Ok(Action::Broadcast(topics)) => {
+                if topics.contains(&msg.topic) {
                     log::debug!("Broadcasting message to topic: {}", msg.topic);
                     self.broadcast(&msg.topic, &msg.msg);
                 } else {
@@ -82,8 +82,8 @@ impl Handler<message::SubscribeToTopic> for Server {
         log::debug!("{:?} subscribing topic {}", msg.id, msg.topic);
 
         match get_action(&msg.token, &self.jwt_public_key) {
-            Ok(Action::Subscribe(topic)) => {
-                if topic == msg.topic {
+            Ok(Action::Subscribe(topics)) => {
+                if topics.contains(&msg.topic) {
                     log::debug!("{:?} is allowed to subscribe topic {}", msg.id, msg.topic);
                     self.topics
                         .entry(msg.topic.clone())
