@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/ikornaselur/notiflux/compare/v0.1.1...v0.2.0) (2024-04-02)
+
+
+### Features
+
+* Update JWTs to support multiple topics ([#12](https://github.com/ikornaselur/notiflux/issues/12)) ([b120327](https://github.com/ikornaselur/notiflux/commit/b120327c051f403574a118d8e27795cc38c9f410))
+
+
+### Miscellaneous
+
+* Update readme with deployment info ([#10](https://github.com/ikornaselur/notiflux/issues/10)) ([19add21](https://github.com/ikornaselur/notiflux/commit/19add212b357be08fdde8f575c8f74e79ed487bb))
+* Update readme with multiple topics in JWT ([#13](https://github.com/ikornaselur/notiflux/issues/13)) ([b16bd47](https://github.com/ikornaselur/notiflux/commit/b16bd47321acbe36693ba3007258e1d1f258cb73))
+
 ## [0.1.1](https://github.com/ikornaselur/notiflux/compare/v0.1.0...v0.1.1) (2024-03-25)
 
 
