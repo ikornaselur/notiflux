@@ -51,7 +51,7 @@ Notiflux uses an EC256 public/private key pair JWT for authentication. Notiflux
 is deployed with the public key, while the broadcaster has the private key as a
 secret.
 
-When clients connect, they need to provide a JWT with the topic and scope,
+When clients connect, they need to provide a JWT with the topics and scope,
 signed by the private key. This token should be provided be the broadcasting
 source.
 
@@ -67,11 +67,14 @@ The JWT token needs to have the following payload:
     "sub": "notiflux",               // Can be any value
     "exp": 123,                      // Expiry just needs to be valid for the broadcast
                                      // or subscribe event, so just few seconds is enough
-    "topic": "topic",                // The topic to validate against
+    "topics": ["topic"],             // The topics to validate against
     "scope": "subscribe|broadcast",  // Needs to be either 'subscribe' for clients
                                      // or 'broadcast' for broadcaster
 }
 ```
+
+Note that the topics can be a list of just one topic or multiple topics, which
+means the same JWT can be used to subscribe or broadcast to multiple topics.
 
 See ./scripts folder for examples in Python
 
