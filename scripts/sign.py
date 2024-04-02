@@ -13,14 +13,14 @@ def main(
     private_key_path: str = typer.Option("private_key.pem"),
     verbose: bool = typer.Option(False),
     scope: Scopes = typer.Argument(),
-    topic: str = typer.Argument(),
+    topics: list[str] = typer.Argument(),
 ):
     private_key = open(private_key_path, "r").read()
 
     payload = {
         "sub": "notiflux",
         "exp": dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=365*100),
-        "topic": topic,
+        "topics": topics,
         "scope": scope.value,
     }
     if verbose:
