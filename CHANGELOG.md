@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/ikornaselur/notiflux/compare/v0.2.0...v0.2.1) (2024-04-05)
+
+
+### Dependencies
+
+* Bump h2 from 0.3.25 to 0.3.26 ([#14](https://github.com/ikornaselur/notiflux/issues/14)) ([d212cc7](https://github.com/ikornaselur/notiflux/commit/d212cc77a3db01f00a83c8c9c9c4c631934babcc))
+
 ## [0.2.0](https://github.com/ikornaselur/notiflux/compare/v0.1.1...v0.2.0) (2024-04-02)
 
 
