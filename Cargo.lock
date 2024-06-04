@@ -863,7 +863,7 @@ dependencies = [
 
 [[package]]
 name = "notiflux"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "actix",
  "actix-web",
