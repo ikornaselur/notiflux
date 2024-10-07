@@ -15,7 +15,6 @@ async fn ws_route(
     ws::start(
         session::WSSession {
             id: Ulid::new(),
-            topics: Vec::new(),
             heartbeat: Instant::now(),
             addr: srv.get_ref().clone(),
         },

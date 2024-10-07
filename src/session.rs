@@ -12,7 +12,6 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 pub struct WSSession {
     pub id: Ulid,
     pub heartbeat: Instant,
-    pub topics: Vec<String>,
     pub addr: Addr<server::Server>,
 }
 
